@@ -1,16 +1,18 @@
-// Constant overhead "Word stuffing" utility: similar to COBS but uses 4 bytes marker.
-// Up to 1GB frame size, constant overhead (+8 bytes).
+// Constant overhead "Word stuffing" utility: similar to COBS but uses 4 bytes marker
+// and 4 bytes offsets.
+// Up to 1GB frame size with constant overhead (+8 bytes).
 
 #ifndef wordstuf_h
 #define wordstuf_h
 
 #include <stdint.h>
+#include <string.h>
 
 
 // all user-defined buffers shall reserve additional space:
 #define COWS_BUFFERS_EXTRA_SPACE 8
 
-// marker requirements: all 4 bytes are different and all >= 0x80
+// marker requirements: all 4 bytes shall be different and all >= 0x80
 #define COWS_MARKER 0xCAFEB8DA
 
 typedef enum CowsParserStatus{
@@ -39,6 +41,15 @@ typedef struct CowsfParser{
   void* onframe_user;
 } CowsParser;
 
+static inline void
+cowsInitParser(CowsParser* ps, void* frame_buf, uint32_t frame_buf_size, CowsOnframeCallback cb, void* cb_user){
+  CowsParser tmp = {0};
+  *ps = tmp;
+  ps->state.dst_buffer = frame_buf;
+  ps->state.dst_len = frame_buf_size;
+  ps->onframe = cb;
+  ps->onframe_user = cb_user;
+}
 
 static inline void
 cowsWriteUint32(unsigned char* b, uint32_t w){ // buffer capacity shall be at least 4 bytes
@@ -48,16 +59,17 @@ cowsWriteUint32(unsigned char* b, uint32_t w){ // buffer capacity shall be at le
   b[3] = (unsigned char) (((uint32_t)w) >> 24);
 }
 
-// offset code has first and last bytes < 128
+// offset code has first and last bytes < 128 to avoid accidental overlapping with marker bytes
 static inline uint32_t
 cowsReadOffset(unsigned char* b){
   return (((uint32_t)b[0] << 1) | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24)) >> 1;
 }
 
-static inline cowsWrieOffset(unsigned char* b, uint32_t off){
+static inline void
+cowsWrieOffset(unsigned char* b, uint32_t off){
   // least significant byte represents 7 least significant bits of the offset
   // other offset bits (7..31) just shifted to the left
-  uint32_t off_code = (((off << 1) & 0xFF)  | ((off & 0x7F)) >> 1);
+  uint32_t off_code = ((off << 1) & ~(uint32_t)0xFF)  | (off & 0x7F);
   cowsWriteUint32(b, off_code);
 }
 
@@ -69,7 +81,7 @@ findMarker(unsigned char* buf, size_t len, uint32_t* current4bytes){
     bb = (bb >> 8) | (((uint32_t) buf[i]) << 24);
     if(bb == COWS_MARKER){
       *current4bytes = bb;
-      return i; // position next to the marker;
+      return i+1; // position next to the marker;
     }
   }
 
@@ -82,7 +94,8 @@ cowsCopyData(CowsParser* ps, void* pstart, size_t limit){
   if(ps->state.dst_len - ps->state.dst_pos < limit) {
     ps->state.status = COWS_ERROR_DST_OVERRUN;
   }else{
-    memcpy(ps->state->dst_buffer + ps->state->dst_pos, pstart, limit);
+    memcpy(ps->state.dst_buffer + ps->state.dst_pos, pstart, limit);
+    ps->state.dst_pos += limit;
   }
 }
 
@@ -118,7 +131,7 @@ doReplacements(CowsParser* ps){
 static inline void
 cowsOnMarkerFound(CowsParser* ps){
   if(ps->state.dst_pos > 0  && !ps->state.status){ // dst buffer not empty and no errors
-    doReplacements(ps); // ToDo: implement it!!!
+    doReplacements(ps);
     ps->onframe(ps->state.dst_buffer + 4, ps->state.dst_pos - 4, ps->onframe_user);
   }
 
@@ -164,14 +177,14 @@ cowsEncodeFrame(void* fr_src, uint32_t fr_len, void* fr_dst){
   memcpy(fr_dst + 4, fr_src, fr_len);
 
   for(;;){
-    size_t mp = findMarker(pd + last_offset_idx , dlen - last_offset_idx , bb); // next to the marker or -1
+    size_t mp = findMarker(pd + last_offset_idx , dlen - last_offset_idx , &bb); // next to the marker or -1
     if(mp == -1) { // marker not found
       cowsWrieOffset(fr_dst + last_offset_idx - 4, dlen - last_offset_idx); // offset to the end of data (i.e final marker)
       cowsWriteUint32(fr_dst + dlen, COWS_MARKER);
-      return dlen + 8; // the whole frame size (first offset + data + final marker)
+      return dlen + 4; // the whole frame size (first offset + data + final marker)
     }else{
-      cowsWrieOffset(fr_dst + last_offset_idx - 4, mp - last_offset_idx - 4);
-      last_offset_idx = mp;
+      cowsWrieOffset(fr_dst + last_offset_idx - 4, mp - 4);
+      last_offset_idx += mp;
     }
   }
 
