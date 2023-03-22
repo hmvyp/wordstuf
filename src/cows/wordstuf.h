@@ -34,7 +34,7 @@ typedef struct CowsParserState{
 
 typedef void (*CowsOnframeCallback) (void* frame_data, uint32_t frame_length, void* user);
 
-typedef struct CowsfParser{
+typedef struct CowsParser{
   CowsParserState state;
   uint32_t bb; // current 4 bytes
   CowsOnframeCallback onframe;

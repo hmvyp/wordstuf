@@ -3,7 +3,7 @@
 
 #include "wordstuf.h"
 
-static unsigned char b[20]; // 5000
+static unsigned char b[5000]; // 5000
 #define bsize (sizeof(b))
 
 static void
@@ -26,7 +26,7 @@ static int rb_idx; // current position in rb
 
 static void onframe(void* frame_data, uint32_t frame_length, void* user){
   (void)user;
-  printf("\n onframe() called\n");
+  // printf("\n onframe() called\n");
   memcpy(rb + rb_idx, frame_data, frame_length);
   rb_idx += frame_length;
 }
@@ -52,7 +52,9 @@ static int cows1test(int k, int m){
       rb_idx = 0;
       memset(rb, 0, sizeof(rb));
       cowsParseChunk(&ps, sb, i);
+      // printf("\n parsing status code (1) %d \n", ps.state.status);
       cowsParseChunk(&ps, sb + i, ssize - i);
+      // printf("\n parsing status code (2) %d \n", ps.state.status);
       if(memcmp(b, rb, bsize) != 0){
         printf("\n error occurred \n");
         return -1;
@@ -65,15 +67,24 @@ static int cows1test(int k, int m){
 static int cows_all_tests(){
   int res =0;
   int k, m; // boundaries between 3 frames
+  int count =0;
   init_src_buf();
-  for(k =0; k < bsize; ++k){
-    for(m = k+1; m < bsize; ++m){ //duck!!! m=k
+
+  printf("\n starting word stuffing tests... \n");
+
+  for(k =0; k < bsize; k += 1 + k/10 ){
+    for(m = k; m < bsize; m += 1 + (m -k)/100){
+      ++count;
+      if(count % 100 == 0) {
+        printf("\n k =%d   m = %d \n", k, m);
+      }
       res = cows1test(k,m);
       if(res != 0){
         return res; // error
       }
     }
   }
+  printf("\n ... tests passed \n");
   return res;
 }
 
