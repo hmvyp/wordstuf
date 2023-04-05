@@ -70,6 +70,6 @@ cowsEncodeFrame(
 );
 
 // include implementation details not intended to direct use:
-#include "wordstuf_impl.h"
+#include "../wordstuf/wordstuf_impl.h"
 
 #endif

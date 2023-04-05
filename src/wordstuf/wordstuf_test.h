@@ -1,7 +1,7 @@
 #ifndef wordstuf_test_h
 #define wordstuf_test_h
 
-#include "wordstuf.h"
+#include "../wordstuf/wordstuf.h"
 
 static unsigned char b[5000]; // 5000
 #define bsize (sizeof(b))
