@@ -21,9 +21,9 @@ struct CowsParser{
 
 static inline void
 cowsInitParser(CowsParser* ps, void* frame_buf, uint32_t frame_buf_size, CowsOnframeCallback cb, void* cb_user){
-  CowsParser tmp = {0};
+  CowsParser tmp = {COWS_PARSING};
   *ps = tmp;
-  ps->state.dst_buffer = frame_buf;
+  ps->state.dst_buffer = (unsigned char*)frame_buf;
   ps->state.dst_len = frame_buf_size;
   ps->onframe = cb;
   ps->onframe_user = cb_user;
@@ -130,7 +130,7 @@ cowsParseChunk(CowsParser* ps, void* src, size_t src_length){
 
   while(limit > 0) {
     size_t mpos = findMarker(pstart, limit, &ps->bb); // returns position next to the marker
-    if(mpos != -1) { // if marker found
+    if(mpos != (size_t)-1) { // if marker found
       if(mpos > 4) {
         cowsCopyData(ps, pstart, mpos - 4);
       }else { // marker (or its tail) found at the beginning of the source data (the previous frame is over)
@@ -157,17 +157,17 @@ cowsEncodeFrame(void* fr_src, uint32_t fr_len, void* fr_dst){
   uint32_t bb = 0;
   uint32_t last_offset_idx = 4; // next to the offset bytes
 
-  memset(fr_dst, 0, 4); // reserve space for 1st offset
-  memcpy(fr_dst + 4, fr_src, fr_len);
+  memset(pd, 0, 4); // reserve space for 1st offset
+  memcpy(pd + 4, fr_src, fr_len);
 
   for(;;){
     size_t mp = findMarker(pd + last_offset_idx , dlen - last_offset_idx , &bb); // next to the marker or -1
-    if(mp == -1) { // marker not found
-      cowsWrieOffset(fr_dst + last_offset_idx - 4, dlen - last_offset_idx); // offset to the end of data (i.e final marker)
-      cowsWriteUint32(fr_dst + dlen, COWS_MARKER);
+    if(mp == (size_t)-1) { // marker not found
+      cowsWrieOffset(pd + last_offset_idx - 4, dlen - last_offset_idx); // offset to the end of data (i.e final marker)
+      cowsWriteUint32(pd + dlen, COWS_MARKER);
       return dlen + 4; // the whole frame size (first offset + data + final marker)
     }else{
-      cowsWrieOffset(fr_dst + last_offset_idx - 4, mp - 4);
+      cowsWrieOffset(pd + last_offset_idx - 4, mp - 4);
       last_offset_idx += mp;
     }
   }

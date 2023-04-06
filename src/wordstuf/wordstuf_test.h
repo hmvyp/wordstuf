@@ -8,7 +8,7 @@ static unsigned char b[5000]; // 5000
 
 static void
 init_src_buf(){
-  int i;
+  size_t i;
   for(i= 0; i != bsize; ++i){
     b[i] = i;
   }
@@ -46,7 +46,7 @@ static int cows1test(int k, int m){
   cowsInitParser(&ps, rb_tmp, sizeof(rb_tmp), onframe, (void*) 0);
 
   // break send buffer into 2 "network packets":
-  int i;
+  size_t i;
   for(i = 0; i < ssize; ++i){
 
       rb_idx = 0;
@@ -66,7 +66,7 @@ static int cows1test(int k, int m){
 
 static int cows_all_tests(){
   int res =0;
-  int k, m; // boundaries between 3 frames
+  size_t k, m; // boundaries between 3 frames
   int count =0;
   init_src_buf();
 
@@ -76,7 +76,7 @@ static int cows_all_tests(){
     for(m = k; m < bsize; m += 1 + (m -k)/100){
       ++count;
       if(count % 100 == 0) {
-        printf("\n k =%d   m = %d \n", k, m);
+        printf("\n k =%d   m = %d \n", (int)k, (int)m);
       }
       res = cows1test(k,m);
       if(res != 0){
