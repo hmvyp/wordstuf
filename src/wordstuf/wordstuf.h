@@ -60,6 +60,16 @@ static inline void
 cowsParseChunk(CowsParser* ps, void* src, size_t src_length);
 
 
+// returns exactly fr_len (on success; ToDo: check fr_len bounds)
+static inline uint32_t
+cowsEncodeFrameInPlace(
+    void* fr_src,
+    uint32_t fr_len,
+    uint32_t* fr_head_bytes, // uint32_t just used as 4-byte space to put 1st offset
+    uint32_t* fr_foot_bytes  // uint32_t just used as 4-byte space to put final marker
+);
+
+
 // The encoder (non-incremental, non-inplace)
 // the function returns size of the encoded data
 static inline uint32_t
