@@ -79,7 +79,7 @@ cowsEncodeFrame(
     void* fr_dst //fr_dst shall reserve at least (fr_len + COWS_BUFFERS_EXTRA_SPACE)
 );
 
-// include implementation details not intended to direct use:
+// include implementation details not intended for direct use:
 #include "../wordstuf/wordstuf_impl.h"
 
 #endif
