@@ -182,7 +182,12 @@ cowsEncodeFrameOld(void* fr_src, uint32_t fr_len, void* fr_dst){
 
 // returns exactly fr_len (on success; ToDo: check fr_len bounds)
 static inline uint32_t
-cowsEncodeFrameInPlace(void* fr_src, uint32_t fr_len, uint32_t* fr_head_bytes, uint32_t* fr_foot_bytes){
+cowsEncodeFrameInPlace(
+    void* fr_src,
+    uint32_t fr_len,
+    unsigned char* fr_head_bytes, // must provide 4-byte space to put 1st offset
+    unsigned char* fr_foot_bytes  // must provide 4-byte space to put final marker
+){
   unsigned char* pd = (unsigned char*) fr_src; // destination as char array
   uint32_t bb = 0;
   uint32_t last_offset_idx = 0; // next to the offset bytes; 0 has special meaning (first offset to write into fr_head_bytes)
@@ -196,11 +201,11 @@ cowsEncodeFrameInPlace(void* fr_src, uint32_t fr_len, uint32_t* fr_head_bytes, u
     if(last_offset_idx) { // second, third, etc. offset shall be writen into data array:
       cowsWrieOffset(pd + last_offset_idx - 4, offset); // offset to the end of data (i.e final marker)
     }else{ // first offset must be written into fr_head_bytes:
-      cowsWriteUint32((unsigned char*)(void*)fr_head_bytes,  cowsMkOffsetCode(offset));
+      cowsWriteUint32(fr_head_bytes,  cowsMkOffsetCode(offset));
     }
 
     if(not_found) {
-      cowsWriteUint32((unsigned char*)(void*)fr_foot_bytes, COWS_MARKER);
+      cowsWriteUint32(fr_foot_bytes, COWS_MARKER);
       return fr_len; // as is
     }else{
       last_offset_idx += mp;
@@ -224,7 +229,7 @@ cowsEncodeFrame(void* fr_src, uint32_t fr_len, void* fr_dst){
   return cowsEncodeFrameInPlace(
       pd + 4, // data bytes (just copied)
       fr_len,
-      (uint32_t*)fr_dst, //  fr_head_bytes (space for the first offset)
-      (uint32_t*)(pd + fr_len + 4)//  fr_foot_bytes (space for the final marker)
+      pd, //  fr_head_bytes (space for the first offset)
+      pd + 4 + fr_len  //  fr_foot_bytes (space for the final marker)
   ) + 8;
 }

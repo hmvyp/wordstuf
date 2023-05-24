@@ -65,8 +65,8 @@ static inline uint32_t
 cowsEncodeFrameInPlace(
     void* fr_src,
     uint32_t fr_len,
-    uint32_t* fr_head_bytes, // uint32_t just used as 4-byte space to put 1st offset
-    uint32_t* fr_foot_bytes  // uint32_t just used as 4-byte space to put final marker
+    unsigned char* fr_head_bytes, // must provide 4-byte space to put 1st offset
+    unsigned char* fr_foot_bytes  // must provide 4-byte space to put final marker
 );
 
 
